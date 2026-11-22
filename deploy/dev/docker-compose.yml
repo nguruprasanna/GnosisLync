@@ -1,0 +1,35 @@
+# Local development dependencies. NOT for any shared or production use: fixed dev-only passwords.
+name: gnosislync-dev
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: gnosis
+      POSTGRES_USER: gnosis_owner          # schema owner (runs migrations)
+      POSTGRES_PASSWORD: dev-only-owner
+    ports: ["5432:5432"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./postgres-init.sql:/docker-entrypoint-initdb.d/10-roles.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gnosis_owner -d gnosis"]
+      interval: 5s
+      retries: 10
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: gnosis-dev
+      MINIO_ROOT_PASSWORD: dev-only-minio
+    ports: ["9000:9000", "9001:9001"]
+    volumes: [minio:/data]
+  vault:
+    image: hashicorp/vault:1.17
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: dev-only-root
+      VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
+    cap_add: [IPC_LOCK]
+    ports: ["8200:8200"]
+volumes:
+  pgdata:
+  minio:

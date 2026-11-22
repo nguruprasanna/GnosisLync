@@ -1,0 +1,8 @@
+# Required reviewers (docs/architecture/09 §3.2). Replace placeholder teams once GitHub teams exist.
+*                                  @nguruprasanna
+# Security-critical paths: two approvals required via branch protection + code owners
+/db/                               @nguruprasanna
+/gnosis/knowledge/lifecycle.py     @nguruprasanna
+/gnosis/context/                   @nguruprasanna
+/services/gnosis_api/auth.py       @nguruprasanna
+/.github/                          @nguruprasanna

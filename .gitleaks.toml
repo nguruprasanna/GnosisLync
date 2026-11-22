@@ -1,0 +1,9 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Dev-only fixtures with no real credentials"
+paths = [
+  '''deploy/dev/.*''',
+  '''tests/.*''',
+]
