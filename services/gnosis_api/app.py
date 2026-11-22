@@ -6,9 +6,11 @@ No `from __future__ import annotations` here: FastAPI must resolve locally defin
 from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Request
+from fastapi import Depends, FastAPI, Header, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from sqlalchemy import Engine, text
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from gnosis.config import Settings
 from gnosis.context import ContextError, Purpose, RequestContext
@@ -18,17 +20,27 @@ from gnosis_api.auth import HS256DevVerifier, TokenVerifier
 PROBLEM = "application/problem+json"
 
 
-def _problem(status: int, code: str, title: str) -> JSONResponse:
-    return JSONResponse(
-        status_code=status,
-        media_type=PROBLEM,
-        content={
-            "type": f"https://gnosislync.svarm/problems/{code.lower()}",
-            "title": title,
-            "status": status,
-            "gnosis_code": code,
-        },
-    )
+def _problem(status: int, code: str, title: str, detail: str | None = None) -> JSONResponse:
+    content: dict[str, Any] = {
+        "type": f"https://gnosislync.svarm/problems/{code.lower()}",
+        "title": title,
+        "status": status,
+        "gnosis_code": code,
+    }
+    if detail:
+        content["detail"] = detail
+    return JSONResponse(status_code=status, media_type=PROBLEM, content=content)
+
+
+class ApiProblem(Exception):
+    """Raised by request handling to return an RFC 9457 problem response."""
+
+    def __init__(self, status: int, code: str, title: str, detail: str | None = None) -> None:
+        super().__init__(f"{code}: {title}")
+        self.status = status
+        self.code = code
+        self.title = title
+        self.detail = detail
 
 
 def create_app(
@@ -48,6 +60,20 @@ def create_app(
         status = 401 if exc.code == "INVALID_TOKEN" else 403
         return _problem(status, exc.code, "Request context rejected")
 
+    @app.exception_handler(ApiProblem)
+    async def _api_problem(_: Request, exc: ApiProblem) -> JSONResponse:
+        return _problem(exc.status, exc.code, exc.title, exc.detail)
+
+    @app.exception_handler(RequestValidationError)
+    async def _validation_error(_: Request, exc: RequestValidationError) -> JSONResponse:
+        fields = sorted({".".join(str(p) for p in err.get("loc", ())) for err in exc.errors()})
+        return _problem(422, "VALIDATION_ERROR", "Request validation failed", f"invalid: {', '.join(fields)}")
+
+    @app.exception_handler(StarletteHTTPException)
+    async def _http_error(_: Request, exc: StarletteHTTPException) -> JSONResponse:
+        code = {404: "NOT_FOUND", 405: "METHOD_NOT_ALLOWED"}.get(exc.status_code, "HTTP_ERROR")
+        return _problem(exc.status_code, code, str(exc.detail))
+
     def request_context(
         authorization: Annotated[str | None, Header()] = None,
         x_gnosis_tenant: Annotated[str | None, Header()] = None,
@@ -61,8 +87,11 @@ def create_app(
         try:
             purpose = Purpose(x_gnosis_purpose or "")
         except ValueError:
-            raise HTTPException(
-                400, "X-Gnosis-Purpose header is required and must be a known purpose"
+            raise ApiProblem(
+                400,
+                "PURPOSE_REQUIRED",
+                "Purpose required",
+                f"X-Gnosis-Purpose must be one of: {', '.join(p.value for p in Purpose)}",
             ) from None
         requested: UUID | None = None
         if x_gnosis_tenant is not None:

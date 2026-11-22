@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="GNOSIS_")
 
     # Application role connection (member of gnosis_app; never the schema owner).
-    database_url: str = "postgresql+psycopg://gnosis_api:dev-only@localhost:5432/gnosis"
+    database_url: str = "postgresql+psycopg://gnosis_api:dev-only@localhost:55432/gnosis"
     # Phase 0 token verification: HS256 shared secret for development/testing only.
     # Phase 1 replaces this with OIDC/JWKS verification against the Svarm IdP.
     jwt_hs256_secret: SecretStr | None = None

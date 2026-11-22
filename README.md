@@ -31,15 +31,49 @@ uv run pytest -m unit
 uv run pytest                              # everything
 uv run pytest --cov --cov-report=json && uv run python scripts/check_coverage.py
 
-# optional: run the API against a local database
-docker compose -f deploy/dev/docker-compose.yml up -d
-GNOSIS_MIGRATION_DATABASE_URL=postgresql+psycopg://gnosis_owner:dev-only-owner@localhost:5432/gnosis \
+# optional: run the API against a local database (see "Hands-on demo" below)
+docker compose -f deploy/dev/docker-compose.yml up -d postgres
+GNOSIS_MIGRATION_DATABASE_URL=postgresql+psycopg://gnosis_owner:dev-only-owner@localhost:55432/gnosis \
   uv run alembic upgrade head
 GNOSIS_JWT_HS256_SECRET=$(openssl rand -hex 32) uv run uvicorn gnosis_api.main:app --reload
 ```
 
 To run DB tests against an existing empty database instead of Testcontainers, set
 `GNOSIS_TEST_DATABASE_URL` to a superuser/owner URL.
+
+### Hands-on demo (Phase 0)
+
+Dev stack ports are localhost-only and offset to avoid clashes: Postgres `55432`, MinIO `59000/59001`,
+Vault `58200`. Demo data: two banks (`DEMO_A`, `DEMO_B`) each with their own meaning of the same T24
+field, one AI-inferred HIGH-significance candidate rule in Bank A, and one shared verified concept.
+
+```bash
+docker compose -f deploy/dev/docker-compose.yml up -d postgres
+GNOSIS_MIGRATION_DATABASE_URL=postgresql+psycopg://gnosis_owner:dev-only-owner@localhost:55432/gnosis \
+  uv run alembic upgrade head
+uv run python scripts/demo.py seed        # idempotent; prints tenant and entity ids
+uv run python scripts/demo.py guards      # tries to break isolation/lifecycle/audit rules; all must be BLOCKED
+
+# terminal 1
+export GNOSIS_JWT_HS256_SECRET=$(openssl rand -hex 32)
+uv run uvicorn gnosis_api.main:app --port 58080
+
+# terminal 2 (export the same GNOSIS_JWT_HS256_SECRET)
+A=$(uv run python scripts/demo.py token --tenant DEMO_A)
+AB=$(uv run python scripts/demo.py token --tenant DEMO_A --tenant DEMO_B --sub user:consultant)
+U=http://127.0.0.1:58080/v1/entities
+H="X-Gnosis-Purpose: REPORTING"
+curl -s -H "Authorization: Bearer $A" -H "$H" $U/3c1b6ff4-0a49-54f2-a57f-608e92b91e7c   # 200 own field
+curl -s -H "Authorization: Bearer $A" -H "$H" $U/81cb12f9-f533-5c53-9941-530b981ee417   # 404 Bank B's field
+curl -s -H "Authorization: Bearer $A" -H "$H" $U/15edbe4c-8595-5293-8dd1-d058fb8d7df8   # 200 shared concept
+curl -s -H "Authorization: Bearer $A" -H "$H" -H "X-Gnosis-Tenant: DEMO_B" \
+  $U/81cb12f9-f533-5c53-9941-530b981ee417                                               # 403 not entitled
+curl -s -H "Authorization: Bearer $AB" -H "$H" -H "X-Gnosis-Tenant: DEMO_B" \
+  $U/81cb12f9-f533-5c53-9941-530b981ee417                                               # 200 consultant
+```
+
+Interactive API docs: http://127.0.0.1:58080/docs. Reset everything:
+`docker compose -f deploy/dev/docker-compose.yml down -v`.
 
 ### Database roles
 

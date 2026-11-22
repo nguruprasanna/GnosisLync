@@ -119,11 +119,34 @@ def test_invalid_tokens_rejected(client: TestClient, world: World, bad: str | No
     assert body["gnosis_code"] == "INVALID_TOKEN"
 
 
-def test_purpose_is_required(client: TestClient, world: World) -> None:
-    status, _ = _get(
-        client, world.entity_a, token({world.code_a: str(world.tenant_a)}), world.code_a, purpose=None
+@pytest.mark.parametrize("purpose", [None, "MARKETING"])
+def test_purpose_is_required(client: TestClient, world: World, purpose: str | None) -> None:
+    tok = token({world.code_a: str(world.tenant_a)})
+    r = client.get(
+        f"/v1/entities/{world.entity_a}",
+        headers={"Authorization": f"Bearer {tok}", **({"X-Gnosis-Purpose": purpose} if purpose else {})},
     )
-    assert status == 400
+    assert r.status_code == 400
+    assert r.headers["content-type"] == "application/problem+json"
+    assert r.json()["gnosis_code"] == "PURPOSE_REQUIRED"
+    assert "REPORTING" in r.json()["detail"]
+
+
+def test_malformed_entity_id_is_problem_json(client: TestClient, world: World) -> None:
+    tok = token({world.code_a: str(world.tenant_a)})
+    r = client.get(
+        "/v1/entities/not-a-uuid", headers={"Authorization": f"Bearer {tok}", "X-Gnosis-Purpose": "REPORTING"}
+    )
+    assert r.status_code == 422
+    assert r.headers["content-type"] == "application/problem+json"
+    assert r.json()["gnosis_code"] == "VALIDATION_ERROR"
+
+
+def test_unknown_route_is_problem_json(client: TestClient) -> None:
+    r = client.get("/v1/nope")
+    assert r.status_code == 404
+    assert r.headers["content-type"] == "application/problem+json"
+    assert r.json()["gnosis_code"] == "NOT_FOUND"
 
 
 def test_unconfigured_verifier_rejects(app_engine: Engine, world: World) -> None:
