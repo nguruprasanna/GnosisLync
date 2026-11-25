@@ -17,4 +17,6 @@ class Settings(BaseSettings):
     jwt_audience: str = "gnosislync"
     jwt_issuer: str = "gnosislync-dev"
     # Versioned role profiles (docs/architecture/04 §2).
+    # Local test drive only (dev personas, token minting, /studio). Refused unless the DB is on localhost.
+    dev_mode: bool = False
     roles_dir: Path = Path(__file__).resolve().parents[1] / "roles"

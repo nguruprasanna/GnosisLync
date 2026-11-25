@@ -7,7 +7,7 @@ future Svarm products.
 - **Design specification:** [`docs/README.md`](docs/README.md)
 - **Status:** Phase 0 (engineering foundations). See `docs/architecture/11-implementation-plan.md`.
 
-## What exists today (Phase 0)
+## What exists today (Phase 0 + Phase 1.1)
 
 | Area | Where |
 |---|---|
@@ -15,8 +15,39 @@ future Svarm products.
 | Tenant isolation: row-level security on every table; app role without `BYPASSRLS`; no context → zero rows | `db/migrations/versions/0001_core.py`, `gnosis/context/` |
 | Lifecycle rules (candidates never auto-promote, four-eyes on HIGH significance), enforced in Python and backed by a DB trigger | `gnosis/knowledge/lifecycle.py` |
 | Append-only, hash-chained audit log with verifier | `audit_event`, `gnosis_verify_audit_chain()` |
-| Minimal API: `/healthz`, `GET /v1/entities/{id}`; tenant comes from the verified token, not the header | `services/gnosis_api/` |
+| API: entities (browse/search, detail, versions), environments, change sets, review decisions, audit events; tenant comes from the verified token, not the header; RFC 9457 errors | `services/gnosis_api/` |
+| Review workflow: change sets, human-only decisions under role authority (`roles/*.yaml`), no self-review, four-eyes for HIGH, no bulk approval of FINANCIAL items, base-version conflict checks, audit in the same transaction | `gnosis/review/`, `gnosis/knowledge/registry.py`, `gnosis/roles/` |
+| Local test drive: demo personas and browser console (dev mode only, localhost only) | `scripts/test-drive.sh`, `services/gnosis_api/dev.py`, `services/gnosis_api/static/studio.html` |
 | Quality gates: ruff, mypy --strict, import-linter boundaries, gitleaks, pytest + coverage gates, pip-audit | `.pre-commit-config.yaml`, `.github/workflows/ci.yml` |
+
+## Test drive (browser)
+
+```bash
+scripts/test-drive.sh          # add --reset to start from a clean database
+```
+
+Then open **http://127.0.0.1:58080/studio**. The script starts the dev Postgres (port 55432), applies
+migrations, loads two demo banks and runs the API in dev mode. Dev mode adds demo personas, a token
+endpoint and the `/studio` console. It only starts against a localhost database and is off by default.
+
+Use the **Acting as** menu to switch persona. A suggested 10-minute script:
+
+1. **Asha (Bank A analyst)**, Explore: Bank A's fields, the AI-suggested rule and the shared concept.
+   Bank B's data is absent.
+2. Propose: keep the defaults (an AI-inferred HIGH, FINANCIAL lending rule), then **Create change set**,
+   **Open it in Review** and **Submit for review**.
+3. **Tomas (T24 technical)**, Review: approve, and see `REVIEW_AUTHORITY_INSUFFICIENT` (his authority
+   stops at MEDIUM).
+4. **RIS Sense (service)**: try to approve, and see `HUMAN_REVIEW_REQUIRED`.
+5. **Lena (Lending)**: approve with a rationale. The item stays UNDER_REVIEW (1 of 2 approvals, four-eyes).
+6. **Luis (Lending)**: approve. The item becomes VERIFIED, with basis `SPECIALIST_APPROVED`.
+7. Explore as anyone in Bank A: open the rule, **Propose a change to this**, submit, and review it again.
+   The old version becomes SUPERSEDED.
+8. **Bea (Bank B)**: Bank A's knowledge and change sets are invisible.
+9. **Sam (Svarm steward)**: pick "No tenant header" and propose a GENERIC concept with target SHARED.
+10. Audit tab: every proposal, submission and decision. Refused attempts leave no event.
+
+The "What the API said" panel shows each call with its status and error code.
 
 ## Local development
 

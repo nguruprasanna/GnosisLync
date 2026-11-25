@@ -30,18 +30,12 @@ from sqlalchemy.exc import DBAPIError
 from gnosis.config import Settings
 from gnosis.context import Principal, Purpose, RequestContext
 from gnosis.context.db import tenant_transaction
+from gnosis_api.dev import TENANTS, demo_id
 
 OWNER_URL = os.environ.get(
     "GNOSIS_MIGRATION_DATABASE_URL", "postgresql+psycopg://gnosis_owner:dev-only-owner@localhost:55432/gnosis"
 )
-NS = uuid.UUID("6f1c2f0e-7a4b-4d8e-9a51-0c1d2e3f4a5b")
-
-
-def _id(name: str) -> uuid.UUID:
-    return uuid.uuid5(NS, name)
-
-
-TENANTS = {"DEMO_A": ("Demo Bank A", _id("tenant:A")), "DEMO_B": ("Demo Bank B", _id("tenant:B"))}
+_id = demo_id  # demo tenant/entity ids are shared with the API's dev personas
 FIELD_KEY = "site:t24:LD.LOANS.AND.DEPOSITS>OPEN.BALANCE"
 ENTITIES: dict[str, uuid.UUID] = {
     "bank_a_field": _id("entity:A:open_balance"),

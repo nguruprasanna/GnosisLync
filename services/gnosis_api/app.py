@@ -6,9 +6,9 @@ from sqlalchemy import Engine
 from gnosis.config import Settings
 from gnosis.context.db import make_engine
 from gnosis.roles import RoleRegistry
-from gnosis_api import problems
+from gnosis_api import dev, problems
 from gnosis_api.auth import HS256DevVerifier, TokenVerifier
-from gnosis_api.routers import change_sets, entities
+from gnosis_api.routers import audit, change_sets, entities, topology
 
 
 def create_app(
@@ -18,6 +18,8 @@ def create_app(
     roles: RoleRegistry | None = None,
 ) -> FastAPI:
     settings = settings or Settings()
+    if settings.dev_mode:
+        dev.check_dev_mode(settings)
     if verifier is None and settings.jwt_hs256_secret is not None:
         verifier = HS256DevVerifier(
             settings.jwt_hs256_secret.get_secret_value(), settings.jwt_audience, settings.jwt_issuer
@@ -35,4 +37,8 @@ def create_app(
 
     app.include_router(entities.router)
     app.include_router(change_sets.router)
+    app.include_router(topology.router)
+    app.include_router(audit.router)
+    if settings.dev_mode:
+        app.include_router(dev.router(settings))
     return app

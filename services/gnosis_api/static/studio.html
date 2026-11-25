@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GnosisLync Studio Preview</title>
+<style>
+:root {
+  --bg: #f6f7f9; --panel: #ffffff; --text: #1c2330; --muted: #5d6778; --line: #dde1e8;
+  --accent: #2257d6; --accent-ink: #ffffff; --ok: #1d7a46; --warn: #a15c00; --bad: #b42318;
+  --chip: #eef1f6; --code: #f1f3f7; --focus: #8fb0ff;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12151b; --panel: #1a1f27; --text: #e6e9ef; --muted: #9aa4b5; --line: #2b323e;
+    --accent: #6f9bff; --accent-ink: #0d1117; --ok: #4cc38a; --warn: #f0a24a; --bad: #ff7b72;
+    --chip: #232a35; --code: #202733; --focus: #3d5fb3;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12151b; --panel: #1a1f27; --text: #e6e9ef; --muted: #9aa4b5; --line: #2b323e;
+  --accent: #6f9bff; --accent-ink: #0d1117; --ok: #4cc38a; --warn: #f0a24a; --bad: #ff7b72;
+  --chip: #232a35; --code: #202733; --focus: #3d5fb3;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text);
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+header { background: var(--panel); border-bottom: 1px solid var(--line); padding: 12px 16px;
+  display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; }
+header h1 { font-size: 16px; margin: 0; letter-spacing: .2px; }
+header h1 span { color: var(--muted); font-weight: 400; }
+.who { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.claims { color: var(--muted); font-size: 12px; }
+nav { display: flex; gap: 4px; padding: 8px 16px 0; flex-wrap: wrap; }
+nav button { border: 1px solid var(--line); border-bottom: none; background: transparent; color: var(--muted);
+  padding: 8px 14px; border-radius: 8px 8px 0 0; cursor: pointer; font: inherit; }
+nav button[aria-selected="true"] { background: var(--panel); color: var(--text); font-weight: 600; }
+main { padding: 0 16px 16px; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 0 8px 8px 8px; padding: 16px; }
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+@media (max-width: 900px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+h2 { font-size: 15px; margin: 0 0 10px; }
+h3 { font-size: 14px; margin: 14px 0 6px; }
+label { display: block; font-size: 12px; color: var(--muted); margin: 8px 0 3px; }
+input, select, textarea { width: 100%; font: inherit; color: var(--text); background: var(--bg);
+  border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
+textarea { min-height: 64px; resize: vertical; }
+input:focus, select:focus, textarea:focus, button:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: end; }
+.row > * { flex: 1 1 140px; }
+button.primary, button.secondary { font: inherit; border-radius: 6px; padding: 7px 14px; cursor: pointer; }
+button.primary { background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent); }
+button.secondary { background: transparent; color: var(--text); border: 1px solid var(--line); }
+button:disabled { opacity: .5; cursor: not-allowed; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 500; font-size: 12px; }
+tr.click { cursor: pointer; }
+tr.click:hover td { background: var(--chip); }
+.table-wrap { overflow-x: auto; }
+.chip { display: inline-block; padding: 1px 8px; border-radius: 999px; background: var(--chip); font-size: 12px;
+  white-space: nowrap; }
+.s-VERIFIED, .s-APPROVED { color: var(--ok); }
+.s-UNDER_REVIEW, .s-IN_REVIEW, .s-PROVISIONAL, .s-PARTIALLY_APPROVED { color: var(--warn); }
+.s-REJECTED, .s-CANDIDATE, .s-SUPERSEDED { color: var(--muted); }
+.sig-HIGH { color: var(--bad); font-weight: 600; }
+.sig-MEDIUM { color: var(--warn); }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; word-break: break-all; }
+.muted { color: var(--muted); }
+.card { border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin: 10px 0; }
+.card header { all: unset; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.decision { display: flex; gap: 12px; flex-wrap: wrap; margin: 6px 0; }
+.decision label { display: inline-flex; gap: 4px; align-items: center; margin: 0; color: var(--text); font-size: 13px; }
+.decision input { width: auto; }
+.notice { border-radius: 6px; padding: 8px 10px; margin: 8px 0; font-size: 13px; }
+.notice.ok { background: color-mix(in srgb, var(--ok) 14%, transparent); }
+.notice.bad { background: color-mix(in srgb, var(--bad) 14%, transparent); }
+.notice.info { background: var(--chip); }
+#log { margin: 16px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; }
+#log summary { padding: 10px 14px; cursor: pointer; font-weight: 600; }
+#log ol { margin: 0; padding: 0 14px 12px 34px; max-height: 260px; overflow: auto; }
+#log li { font-size: 12px; margin: 3px 0; }
+.empty { color: var(--muted); padding: 12px 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>GnosisLync <span>Studio preview · local test drive</span></h1>
+  <div class="who">
+    <label for="persona" style="margin:0">Acting as</label>
+    <select id="persona" style="width:auto"></select>
+    <label for="tenant" style="margin:0">Tenant</label>
+    <select id="tenant" style="width:auto"></select>
+    <label for="purpose" style="margin:0">Purpose</label>
+    <select id="purpose" style="width:auto">
+      <option>KNOWLEDGE_ADMIN</option><option>REPORTING</option><option>TESTING</option><option>DISCOVERY</option>
+    </select>
+  </div>
+  <div class="claims" id="claims"></div>
+</header>
+<nav role="tablist">
+  <button role="tab" data-tab="explore" aria-selected="true">Explore</button>
+  <button role="tab" data-tab="propose" aria-selected="false">Propose</button>
+  <button role="tab" data-tab="review" aria-selected="false">Review</button>
+  <button role="tab" data-tab="audit" aria-selected="false">Audit</button>
+</nav>
+<main><div class="panel" id="view"></div></main>
+<details id="log" open>
+  <summary>What the API said</summary>
+  <ol id="logList" reversed></ol>
+</details>
+
+<script>
+"use strict";
+// ------------------------------------------------------------------ tiny DOM helper (text nodes only; no HTML strings)
+function h(tag, attrs, ...children) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v === null || v === undefined || v === false) continue;
+    if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+    else if (k === "class") el.className = v;
+    else el.setAttribute(k, v === true ? "" : String(v));
+  }
+  for (const c of children.flat()) {
+    if (c === null || c === undefined || c === false) continue;
+    el.append(c instanceof Node ? c : document.createTextNode(String(c)));
+  }
+  return el;
+}
+function nodes(children) {
+  return children.flat(Infinity).filter((c) => c !== null && c !== undefined && c !== false)
+    .map((c) => (c instanceof Node ? c : document.createTextNode(String(c))));
+}
+const fill = (el, ...children) => el.replaceChildren(...nodes(children));
+const add = (el, ...children) => el.append(...nodes(children));
+const chip = (text, cls) => h("span", { class: `chip ${cls || ""}` }, text ?? "—");
+const statusChip = (s) => chip(s, `s-${s}`);
+const sigChip = (s) => chip(s, `sig-${s}`);
+const short = (id) => (id ? String(id).slice(0, 8) : "—");
+
+// ------------------------------------------------------------------ state
+const state = { personas: [], tenants: {}, persona: null, token: null, tab: "explore",
+  selectedEntity: null, selectedChangeSet: null, draft: null };
+
+// ------------------------------------------------------------------ API client
+function log(method, path, status, body) {
+  const code = body && body.gnosis_code ? ` ${body.gnosis_code}` : "";
+  const detail = body && body.detail ? ` — ${body.detail}` : "";
+  const cls = status >= 400 ? "s-REJECTED" : "s-APPROVED";
+  document.getElementById("logList").prepend(
+    h("li", {}, h("span", { class: cls }, String(status)), ` ${method} ${path}${code}${detail}`));
+}
+async function api(method, path, body, extraHeaders) {
+  const headers = { "Authorization": `Bearer ${state.token}`,
+    "X-Gnosis-Purpose": document.getElementById("purpose").value, ...(extraHeaders || {}) };
+  const tenant = document.getElementById("tenant").value;
+  if (tenant) headers["X-Gnosis-Tenant"] = tenant;
+  if (body !== undefined) headers["Content-Type"] = "application/json";
+  const res = await fetch(path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
+  let data = null;
+  try { data = await res.json(); } catch { data = null; }
+  log(method, path, res.status, data);
+  return { ok: res.ok, status: res.status, data };
+}
+function problemNotice(r) {
+  const d = r.data || {};
+  return h("div", { class: "notice bad" }, h("strong", {}, `${r.status} ${d.gnosis_code || ""}`), " ",
+    d.detail || d.title || "Request failed");
+}
+
+// ------------------------------------------------------------------ persona switching
+async function loadPersonas() {
+  const res = await fetch("/dev/personas");
+  const data = await res.json();
+  state.personas = data.personas;
+  state.tenants = data.tenants;
+  const sel = document.getElementById("persona");
+  fill(sel, ...state.personas.map((p) => h("option", { value: p.id }, p.name)));
+  sel.addEventListener("change", () => switchPersona(sel.value));
+  document.getElementById("tenant").addEventListener("change", render);
+  document.getElementById("purpose").addEventListener("change", render);
+  await switchPersona(state.personas[0].id);
+}
+async function switchPersona(id) {
+  const res = await fetch("/dev/token", { method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ persona: id }) });
+  state.token = (await res.json()).token;
+  state.persona = state.personas.find((p) => p.id === id);
+  const p = state.persona;
+  const tsel = document.getElementById("tenant");
+  const opts = p.tenants.map((t) => h("option", { value: t }, `${t} (${state.tenants[t]})`));
+  if (p.tenants.length > 1 || p.shared_write) opts.push(h("option", { value: "" }, "No tenant header"));
+  fill(tsel, ...opts);
+  fill(document.getElementById("claims"), 
+    p.description, " · ", p.human ? "HUMAN" : "SERVICE", " · roles: ", p.roles.join(", ") || "none",
+    p.shared_write ? " · shared write" : "");
+  state.selectedEntity = null;
+  state.selectedChangeSet = null;
+  render();
+}
+
+// ------------------------------------------------------------------ tabs
+document.querySelectorAll("nav button").forEach((b) => b.addEventListener("click", () => {
+  state.tab = b.dataset.tab;
+  document.querySelectorAll("nav button").forEach((x) => x.setAttribute("aria-selected", x === b));
+  render();
+}));
+function render() {
+  const view = document.getElementById("view");
+  fill(view, );
+  ({ explore: renderExplore, propose: renderPropose, review: renderReview, audit: renderAudit })[state.tab](view);
+}
+function goTab(tab) {
+  state.tab = tab;
+  document.querySelectorAll("nav button").forEach((x) => x.setAttribute("aria-selected", x.dataset.tab === tab));
+  render();
+}
+
+// ------------------------------------------------------------------ Explore
+function renderExplore(view) {
+  const q = h("input", { placeholder: "Search name, key or definition…", value: state.q || "" });
+  const kind = h("select", {}, ["", "banking_concept", "site_field", "business_rule"].map(
+    (k) => h("option", { value: k, selected: state.kind === k }, k || "any kind")));
+  const results = h("div", { class: "table-wrap" });
+  const detail = h("div", {});
+  async function search() {
+    state.q = q.value; state.kind = kind.value;
+    const params = new URLSearchParams();
+    if (q.value) params.set("q", q.value);
+    if (kind.value) params.set("kind", kind.value);
+    const r = await api("GET", `/v1/entities?${params}`);
+    if (!r.ok) { fill(results, problemNotice(r)); return; }
+    const rows = r.data.entities;
+    fill(results, rows.length === 0 ? h("p", { class: "empty" }, "Nothing visible to this persona.") :
+      h("table", {}, h("thead", {}, h("tr", {}, ["Name", "Kind", "Scope", "Status", "Significance"].map((t) => h("th", {}, t)))),
+        h("tbody", {}, rows.map((e) => h("tr", { class: "click", onclick: () => showEntity(e.entity_id, detail) },
+          h("td", {}, e.name, h("div", { class: "mono muted" }, e.canonical_key)), h("td", {}, e.kind),
+          h("td", {}, e.scope), h("td", {}, statusChip(e.status)), h("td", {}, sigChip(e.financial_significance)))))));
+  }
+  q.addEventListener("keydown", (ev) => { if (ev.key === "Enter") search(); });
+  add(view, h("div", { class: "grid" },
+    h("section", {}, h("h2", {}, "Knowledge visible to you"),
+      h("div", { class: "row" }, q, kind, h("button", { class: "primary", onclick: search }, "Search")), results),
+    h("section", {}, detail)));
+  search();
+  if (state.selectedEntity) showEntity(state.selectedEntity, detail);
+  else add(detail, h("p", { class: "empty" }, "Select an entity to see its versions."));
+}
+async function showEntity(id, target) {
+  state.selectedEntity = id;
+  const [e, v] = await Promise.all([api("GET", `/v1/entities/${id}`), api("GET", `/v1/entities/${id}/versions`)]);
+  if (!e.ok) { fill(target, problemNotice(e)); return; }
+  const d = e.data;
+  fill(target, 
+    h("h2", {}, d.name), h("div", { class: "mono muted" }, d.canonical_key),
+    h("p", {}, statusChip(d.status), " ", chip(d.kind), " ", chip(d.scope), " ", sigChip(d.financial_significance),
+      " ", chip(d.verification_basis || "no basis")),
+    h("p", {}, d.definition || h("span", { class: "muted" }, "No definition.")),
+    d.domain_codes && d.domain_codes.length ? h("p", { class: "muted" }, "Domains: ", d.domain_codes.join(", ")) : null,
+    h("button", { class: "secondary", onclick: () => {
+      state.draft = { op: "UPDATE", entity: d, base: d.version_id }; goTab("propose");
+    } }, "Propose a change to this"),
+    h("h3", {}, "Version history"),
+    v.ok ? h("table", {}, h("tbody", {}, v.data.versions.map((x) => h("tr", {},
+      h("td", {}, `v${x.version_no}`), h("td", {}, statusChip(x.status)), h("td", {}, x.verification_basis || "—"),
+      h("td", {}, x.name), h("td", { class: "muted" }, x.produced_by))))) : problemNotice(v));
+}
+
+// ------------------------------------------------------------------ Propose
+async function renderPropose(view) {
+  const draft = state.draft;
+  const isUpdate = draft && draft.op === "UPDATE";
+  const envs = await api("GET", "/v1/environments");
+  const f = (id, el) => { el.id = id; return el; };
+  const opt = (vals, sel) => vals.map((v) => h("option", { value: v, selected: v === sel }, v));
+  const target = f("target", h("select", {}, opt(["TENANT", "SHARED"])));
+  const scope = f("scope", h("select", {}, opt(["SITE", "GENERIC", "PRODUCT"])));
+  const kind = f("kind", h("select", {}, opt(["business_rule", "site_field", "banking_concept"])));
+  const key = f("key", h("input", { value: `site:rule:demo-${Math.random().toString(36).slice(2, 7)}` }));
+  const env = f("env", h("select", {}, (envs.ok ? envs.data.environments : []).map((e) =>
+    h("option", { value: e.environment_id }, `${e.tenant_code}/${e.instance_code}/${e.code} · ${e.product_code} ${e.release_code}`))));
+  const domains = f("domains", h("input", { value: "LENDING" }));
+  const materiality = f("materiality", h("select", {}, opt(["COSMETIC", "DESCRIPTIVE", "SEMANTIC", "FINANCIAL"], "FINANCIAL")));
+  const status = f("status", h("select", {}, opt(["CANDIDATE", "DRAFT", "OBSERVED"])));
+  const name = f("name", h("input", { value: isUpdate ? draft.entity.name : "Principal balance types" }));
+  const definition = f("definition", h("textarea", {},
+    isUpdate ? (draft.entity.definition || "") : "Principal = CURACCOUNT + DUEACCOUNT + overdue <STATUS>ACCOUNT variants."));
+  const epistemic = f("epistemic", h("select", {}, opt(["FACT", "INTERPRETATION", "IMPLEMENTATION_SPECIFIC", "ASSUMPTION"], "INTERPRETATION")));
+  const basis = f("basis", h("select", {}, opt(["AI_INFERRED", "DOCUMENTATION", "SOURCE_METADATA", "CODE_OBSERVED", "SPECIALIST_APPROVED", "DATA_PROFILED"])));
+  const sig = f("sig", h("select", {}, opt(["NONE", "LOW", "MEDIUM", "HIGH"], isUpdate ? draft.entity.financial_significance : "HIGH")));
+  const out = h("div", {});
+  const L = (text, el) => h("div", {}, h("label", { for: el.id }, text), el);
+
+  async function send() {
+    const version = { status: status.value, name: name.value, definition: definition.value || null,
+      epistemic_class: epistemic.value, verification_basis: basis.value, financial_significance: sig.value };
+    const item = isUpdate
+      ? { op: "UPDATE", entity_id: draft.entity.entity_id, base_version_id: draft.base, materiality: materiality.value, version }
+      : { op: "CREATE", scope: scope.value, kind: kind.value, canonical_key: key.value,
+          environment_id: scope.value === "SITE" ? env.value : null,
+          domain_codes: domains.value.split(",").map((s) => s.trim()).filter(Boolean), materiality: materiality.value, version };
+    const r = await api("POST", "/v1/change-sets", { title: `${isUpdate ? "Update" : "New"}: ${name.value}`,
+      target: isUpdate ? (draft.entity.tenant_id ? "TENANT" : "SHARED") : target.value, items: [item] });
+    if (!r.ok) { fill(out, problemNotice(r)); return; }
+    state.selectedChangeSet = r.data.change_set_id;
+    state.draft = null;
+    fill(out, h("div", { class: "notice ok" }, "Change set created (OPEN). ",
+      h("button", { class: "primary", onclick: () => goTab("review") }, "Open it in Review")));
+  }
+  add(view, h("h2", {}, isUpdate ? `Propose an update to “${draft.entity.name}”` : "Propose new knowledge"),
+    isUpdate ? h("p", { class: "muted" }, "A new immutable version is created against base version ",
+      h("span", { class: "mono" }, short(draft.base)), ". If someone else's change is verified first, yours is refused with BASE_VERSION_CHANGED.",
+      " ", h("button", { class: "secondary", onclick: () => { state.draft = null; render(); } }, "Cancel")) :
+      h("p", { class: "muted" }, "SITE items belong to one bank (pick it in the header). GENERIC items go to the shared layer and need target SHARED plus shared-write rights."),
+    h("div", { class: "grid" },
+      h("section", {}, isUpdate ? null : h("div", { class: "row" }, L("Target", target), L("Scope", scope), L("Kind", kind)),
+        isUpdate ? null : L("Canonical key", key), isUpdate ? null : L("Environment (SITE only)", env),
+        isUpdate ? null : L("Domains (comma separated)", domains), L("Materiality", materiality)),
+      h("section", {}, L("Name", name), L("Definition", definition),
+        h("div", { class: "row" }, L("Initial status", status), L("Epistemic class", epistemic)),
+        h("div", { class: "row" }, L("Verification basis", basis), L("Financial significance", sig)))),
+    h("p", {}, h("button", { class: "primary", onclick: send }, "Create change set")), out);
+}
+
+// ------------------------------------------------------------------ Review
+async function renderReview(view) {
+  const list = h("div", { class: "table-wrap" });
+  const detail = h("div", {});
+  add(view, h("div", { class: "grid" },
+    h("section", {}, h("h2", {}, "Change sets visible to you"), list), h("section", {}, detail)));
+  const r = await api("GET", "/v1/change-sets");
+  if (!r.ok) { fill(list, problemNotice(r)); return; }
+  const rows = r.data.change_sets;
+  fill(list, rows.length === 0 ? h("p", { class: "empty" }, "No change sets yet — create one in Propose.") :
+    h("table", {}, h("thead", {}, h("tr", {}, ["Title", "Status", "Risk", "Created"].map((t) => h("th", {}, t)))),
+      h("tbody", {}, rows.map((c) => h("tr", { class: "click", onclick: () => showChangeSet(c.change_set_id, detail) },
+        h("td", {}, c.title, h("div", { class: "mono muted" }, short(c.change_set_id))), h("td", {}, statusChip(c.status)),
+        h("td", {}, chip(c.risk_level)), h("td", { class: "muted" }, new Date(c.created_at).toLocaleString()))))));
+  if (state.selectedChangeSet) showChangeSet(state.selectedChangeSet, detail);
+  else add(detail, h("p", { class: "empty" }, "Select a change set."));
+}
+async function showChangeSet(id, target) {
+  state.selectedChangeSet = id;
+  const r = await api("GET", `/v1/change-sets/${id}`);
+  if (!r.ok) { fill(target, problemNotice(r)); return; }
+  const cs = r.data;
+  const msg = h("div", {});
+  const roles = state.persona.roles;
+  const roleSel = h("select", { id: "role" }, (roles.length ? roles : ["(no role)"]).map((x) => h("option", { value: x }, x)));
+  async function submit() {
+    const s = await api("POST", `/v1/change-sets/${id}:submit`);
+    if (!s.ok) { fill(msg, problemNotice(s)); return; }
+    await showChangeSet(id, target);
+  }
+  function itemCard(item) {
+    const name = `d-${item.change_item_id}`;
+    const radios = ["APPROVE", "APPROVE_PROVISIONAL", "REJECT", "REQUEST_CHANGES"].map((d, i) =>
+      h("label", {}, h("input", { type: "radio", name, value: d, checked: i === 0 }), d.replace("_", " ").toLowerCase()));
+    const rationale = h("textarea", { placeholder: "Rationale (required)" });
+    const itemMsg = h("div", {});
+    async function decide() {
+      const decision = document.querySelector(`input[name="${name}"]:checked`).value;
+      const d = await api("POST", `/v1/change-sets/${id}/decisions`,
+        { decisions: [{ change_item_id: item.change_item_id, decision, rationale: rationale.value }] },
+        { "X-Gnosis-Role": roleSel.value });
+      if (!d.ok) { fill(itemMsg, problemNotice(d)); return; }
+      const res = d.data.results[0];
+      const note = res.status === "UNDER_REVIEW" ? ` — ${res.approvals_present} of ${res.approvals_required} approvals; another qualified approver is needed` : "";
+      await showChangeSet(id, target);
+      target.prepend(h("div", { class: "notice ok" }, `Recorded ${decision}. Item is now ${res.status}${note}.`));
+    }
+    const reviewable = cs.status === "IN_REVIEW" && (item.status === "UNDER_REVIEW" || item.status === "PROVISIONAL");
+    return h("div", { class: "card" },
+      h("header", {}, h("strong", {}, item.name), statusChip(item.status), chip(item.op), chip(item.kind),
+        sigChip(item.financial_significance), chip(`materiality ${item.materiality}`)),
+      h("div", { class: "mono muted" }, item.canonical_key),
+      h("p", {}, item.definition || ""),
+      h("p", { class: "muted" }, "Basis: ", item.verification_basis || "—", " · ", item.epistemic_class,
+        item.domain_codes && item.domain_codes.length ? ` · domains ${item.domain_codes.join(", ")}` : "",
+        item.diff && item.diff.changed_fields ? ` · changed: ${item.diff.changed_fields.join(", ")}` : ""),
+      item.decisions.length ? h("table", {}, h("tbody", {}, item.decisions.map((d) => h("tr", {},
+        h("td", {}, chip(d.decision)), h("td", { class: "muted" }, d.reviewer_role), h("td", {}, d.rationale),
+        h("td", { class: "mono muted" }, short(d.reviewer_id)))))) : null,
+      reviewable ? h("div", {}, h("div", { class: "decision" }, radios), rationale,
+        h("p", {}, h("button", { class: "primary", onclick: decide }, "Record decision"))) : null,
+      itemMsg);
+  }
+  fill(target, 
+    h("h2", {}, cs.title), h("p", {}, statusChip(cs.status), " ", chip(`risk ${cs.risk_level}`), " ",
+      chip(cs.tenant_id ? "tenant" : "shared"), " ", h("span", { class: "mono muted" }, cs.change_set_id)),
+    cs.status === "OPEN" ? h("div", { class: "notice info" }, "Draft change set. Only its author can submit it for review. ",
+      h("button", { class: "primary", onclick: submit }, "Submit for review")) : null,
+    cs.status === "IN_REVIEW" ? h("div", { class: "row" }, h("div", {}, h("label", { for: "role" }, "Review under role"), roleSel)) : null,
+    msg, cs.items.map(itemCard));
+}
+
+// ------------------------------------------------------------------ Audit
+async function renderAudit(view) {
+  add(view, h("h2", {}, "Audit trail (append-only, hash-chained)"),
+    h("p", { class: "muted" }, "Events in this persona's tenants. Shared-knowledge events are visible to shared writers only. Refused requests roll back and leave no event."));
+  const r = await api("GET", "/v1/audit-events?limit=100");
+  if (!r.ok) { add(view, problemNotice(r)); return; }
+  add(view, h("div", { class: "table-wrap" }, h("table", {},
+    h("thead", {}, h("tr", {}, ["#", "When", "Actor", "Role", "Action", "Object", "Details"].map((t) => h("th", {}, t)))),
+    h("tbody", {}, r.data.events.map((e) => h("tr", {}, h("td", {}, e.seq),
+      h("td", { class: "muted" }, new Date(e.ts).toLocaleString()), h("td", {}, e.actor), h("td", {}, e.actor_role || "—"),
+      h("td", {}, chip(e.action)), h("td", { class: "mono" }, e.object_ref || "—"),
+      h("td", { class: "mono muted" }, JSON.stringify(e.details))))))));
+}
+
+loadPersonas().catch((err) => {
+  fill(document.getElementById("view"), h("div", { class: "notice bad" },
+    "Could not start: ", String(err), ". Is the API running with GNOSIS_DEV_MODE=true?"));
+});
+</script>
+</body>
+</html>

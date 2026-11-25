@@ -1,9 +1,9 @@
 """Knowledge exploration endpoints (docs/architecture/05 §2 Knowledge)."""
 
-from typing import Any
+from typing import Annotated, Any, Literal
 from uuid import UUID
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 from sqlalchemy import text
 
 from gnosis.context.db import tenant_transaction
@@ -27,6 +27,46 @@ _ENTITY_SQL = text("""
 def _not_found() -> ApiProblem:
     # Same response whether the entity is absent or belongs to another tenant.
     return ApiProblem(404, "NOT_FOUND", "Entity not found")
+
+
+_LIST_SQL = text("""
+    SELECT e.entity_id, e.scope, e.kind, e.canonical_key, e.tenant_id, e.domain_codes,
+           v.version_no, v.status, v.name, v.financial_significance, v.verification_basis,
+           (h.verified_version IS NOT NULL) AS has_verified
+    FROM knowledge_entity e
+    JOIN entity_head h ON h.entity_id = e.entity_id
+    JOIN entity_version v ON v.version_id = coalesce(h.verified_version, h.working_version)
+    WHERE (CAST(:kind AS text) IS NULL OR e.kind = :kind)
+      AND (CAST(:scope AS text) IS NULL OR e.scope = :scope)
+      AND (CAST(:status AS text) IS NULL OR v.status = :status)
+      AND (CAST(:q AS text) IS NULL
+           OR v.search_tsv @@ plainto_tsquery('simple', :q)
+           OR v.name ILIKE '%' || :q || '%'
+           OR e.canonical_key ILIKE '%' || :q || '%')
+    ORDER BY e.scope, e.kind, e.canonical_key
+    LIMIT :limit
+""")
+
+
+@router.get("")
+def list_entities(
+    *,
+    ctx: Ctx,
+    eng: EngineDep,
+    q: Annotated[str | None, Query(max_length=200)] = None,
+    kind: Annotated[str | None, Query(max_length=100)] = None,
+    scope: Literal["GENERIC", "PRODUCT", "SITE", "SVARM_INTERNAL"] | None = None,
+    status: Annotated[str | None, Query(max_length=30)] = None,
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+) -> dict[str, Any]:
+    """Browse/search knowledge visible to the caller (row-level security applies).
+
+    Phase 1 lexical search (full text + substring); hybrid vector retrieval arrives with increment 4.
+    """
+    params = {"q": q or None, "kind": kind, "scope": scope, "status": status, "limit": limit}
+    with tenant_transaction(eng, ctx) as conn:
+        rows = conn.execute(_LIST_SQL, params).mappings()
+        return {"entities": [dict(r) for r in rows]}
 
 
 @router.get("/{entity_id}")
