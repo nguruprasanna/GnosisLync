@@ -1,7 +1,8 @@
 # Pull-request and main-branch gates (docs/architecture/09-quality-gates-testing.md §3.2).
 # Phase 0 subset: static, secrets, unit + DB (isolation/privacy/lifecycle), coverage, dependency audit.
 # Later phases add: contract (schemathesis/pact), evals, EKWORLD regression, SBOM/image scanning.
-# Supply chain: pin third-party actions to commit SHAs before enabling on protected branches.
+# Supply chain: third-party actions are pinned to commit SHAs and images to digests; the version comment is
+# informational. Update both together (e.g. via Dependabot).
 name: ci
 on:
   pull_request:
@@ -19,8 +20,12 @@ jobs:
   static:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
+        with:
+          version: "0.12.20"
       - run: uv sync --frozen
       - run: uv run ruff format --check .
       - run: uv run ruff check .
@@ -30,19 +35,26 @@ jobs:
   secrets:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          persist-credentials: false
       - name: gitleaks
         run: |
-          docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.21.2 \
-            detect --source /repo --config /repo/.gitleaks.toml --redact --verbose
+          # v8.30.1, pinned by digest
+          docker run --rm -v "$PWD:/repo" \
+            zricethezav/gitleaks@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f \
+            git /repo --config /repo/.gitleaks.toml --redact --verbose
 
   tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
+        with:
+          version: "0.12.20"
       - run: uv sync --frozen
       - name: unit + database tests (Testcontainers, pgvector/pgvector:pg16)
         run: uv run pytest --cov --cov-report=json --cov-report=term
@@ -52,8 +64,12 @@ jobs:
   dependencies:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
+        with:
+          version: "0.12.20"
       - run: uv sync --frozen
       - run: uv export --frozen --no-dev --no-hashes --no-emit-project -o requirements.txt
       # export pins every transitive dependency, so audit the list as-is (no resolver venv needed)

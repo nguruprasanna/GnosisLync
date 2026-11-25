@@ -16,3 +16,6 @@ build/
 .env
 .env.*
 .import_linter_cache/
+
+# local conversation exports
+/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-*.txt
