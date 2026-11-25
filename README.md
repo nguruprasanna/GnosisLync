@@ -72,6 +72,29 @@ curl -s -H "Authorization: Bearer $AB" -H "$H" -H "X-Gnosis-Tenant: DEMO_B" \
   $U/81cb12f9-f533-5c53-9941-530b981ee417                                               # 200 consultant
 ```
 
+#### Try the review workflow (Phase 1)
+
+```bash
+H="X-Gnosis-Purpose: KNOWLEDGE_ADMIN"; T="X-Gnosis-Tenant: DEMO_A"
+AUTHOR=$(uv run python scripts/demo.py token --tenant DEMO_A --sub user:author --human)
+R1=$(uv run python scripts/demo.py token --tenant DEMO_A --sub user:rev1 --human --role lending_aa_specialist)
+R2=$(uv run python scripts/demo.py token --tenant DEMO_A --sub user:rev2 --human --role lending_aa_specialist)
+ENV=$(docker compose -f deploy/dev/docker-compose.yml exec -T postgres psql -U gnosis_owner -d gnosis -Atc \
+  "SELECT environment_id FROM environment e JOIN tenant t USING (tenant_id) WHERE t.code='DEMO_A'")
+CS=$(curl -s -X POST http://127.0.0.1:58080/v1/change-sets -H "Authorization: Bearer $AUTHOR" -H "$H" -H "$T" \
+  -H 'Content-Type: application/json' -d '{"title":"Principal rule","target":"TENANT","items":[{"op":"CREATE",
+  "scope":"SITE","kind":"business_rule","canonical_key":"site:rule:principal-balance-types","environment_id":"'$ENV'",
+  "domain_codes":["LENDING"],"materiality":"FINANCIAL","version":{"name":"Principal balance types",
+  "verification_basis":"AI_INFERRED","epistemic_class":"INTERPRETATION","financial_significance":"HIGH"}}]}')
+ID=$(echo "$CS" | python3 -c 'import json,sys;print(json.load(sys.stdin)["change_set_id"])')
+ITEM=$(echo "$CS" | python3 -c 'import json,sys;print(json.load(sys.stdin)["items"][0]["change_item_id"])')
+curl -s -X POST http://127.0.0.1:58080/v1/change-sets/$ID:submit -H "Authorization: Bearer $AUTHOR" -H "$H" -H "$T"; echo
+D='{"decisions":[{"change_item_id":"'$ITEM'","decision":"APPROVE","rationale":"matches AA conditions"}]}'
+for R in "$AUTHOR" "$R1" "$R2"; do   # author refused (403), rev1 = 1 of 2 approvals, rev2 -> VERIFIED
+  curl -s -X POST http://127.0.0.1:58080/v1/change-sets/$ID/decisions -H "Authorization: Bearer $R" -H "$H" -H "$T" \
+    -H "X-Gnosis-Role: lending_aa_specialist" -H 'Content-Type: application/json' -d "$D"; echo; done
+```
+
 Interactive API docs: http://127.0.0.1:58080/docs. Reset everything:
 `docker compose -f deploy/dev/docker-compose.yml down -v`.
 

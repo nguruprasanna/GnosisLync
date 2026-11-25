@@ -11,6 +11,9 @@ import sys
 CRITICAL = {
     "gnosis/knowledge/lifecycle.py": (95.0, 90.0),
     "gnosis/context/*.py": (95.0, 90.0),
+    "gnosis/knowledge/registry.py": (95.0, 90.0),
+    "gnosis/review/*.py": (95.0, 90.0),
+    "gnosis/roles/*.py": (95.0, 90.0),
     "services/gnosis_api/auth.py": (95.0, 90.0),
 }
 

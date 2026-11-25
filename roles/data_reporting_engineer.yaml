@@ -1,0 +1,10 @@
+id: data_reporting_engineer
+version: 1.0.0
+display_name: Data / Reporting Engineer
+domains: [REPORTING, DATA]
+allowed_skills: [get_banking_concept, get_site_context]
+review_authority:
+  can_approve:
+    domains: [REPORTING, DATA]
+    max_financial_significance: MEDIUM
+    entity_kinds: [mapping, site_field, schema_object]

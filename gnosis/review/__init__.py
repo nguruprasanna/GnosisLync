@@ -1,1 +1,1 @@
-"""Change sets, review decisions and package publication (Phase 1)."""
+"""Change sets, review decisions and verification. The only writer of ``entity_head.verified_version``."""

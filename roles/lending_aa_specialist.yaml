@@ -1,0 +1,16 @@
+id: lending_aa_specialist
+version: 1.0.0
+display_name: Lending / AA Specialist
+domains: [LENDING, INTEREST_FEES, ACCOUNTING]
+products: [TEMENOS_TRANSACT]
+knowledge_access:
+  scopes: [GENERIC, PRODUCT, SITE, SVARM_INTERNAL]
+cautions:
+  - "Distinguish current, due and overdue principal; never sum interest into principal."
+  - "AA behaviour is product-condition driven; site configuration overrides product defaults."
+allowed_skills: [get_banking_concept, get_product_knowledge, get_site_context]
+review_authority:
+  can_approve:
+    domains: [LENDING, INTEREST_FEES]
+    max_financial_significance: HIGH
+    entity_kinds: [banking_concept, business_rule, calculation, site_rule, site_field, mapping]

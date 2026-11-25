@@ -1,0 +1,12 @@
+id: knowledge_steward
+version: 1.0.0
+display_name: Knowledge Steward
+domains: []
+knowledge_access:
+  scopes: [GENERIC, PRODUCT, SITE, SVARM_INTERNAL]
+allowed_skills: []
+# Merges, taxonomy, deprecation; not financial semantics.
+review_authority:
+  can_approve:
+    domains: [TAXONOMY]
+    max_financial_significance: NONE

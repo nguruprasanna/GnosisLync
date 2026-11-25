@@ -66,3 +66,21 @@ def test_wrong_issuer_rejected() -> None:
 def test_short_secret_refused() -> None:
     with pytest.raises(ValueError):
         HS256DevVerifier("short", "a", "b")
+
+
+def test_roles_and_principal_type() -> None:
+    principal, _ = V.verify(enc({"roles": ["lending_aa_specialist"], "principal_type": "HUMAN"}))
+    assert principal.roles == {"lending_aa_specialist"}
+    assert principal.kind.value == "HUMAN"
+
+
+def test_principal_type_defaults_to_service() -> None:
+    principal, _ = V.verify(enc({}))
+    assert principal.kind.value == "SERVICE"
+    assert principal.roles == frozenset()
+
+
+@pytest.mark.parametrize("claims", [{"roles": "admin"}, {"roles": [1]}, {"principal_type": "ROBOT"}])
+def test_malformed_roles_or_type(claims: dict[str, object]) -> None:
+    with pytest.raises(ContextError):
+        V.verify(enc(claims))

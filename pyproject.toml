@@ -13,6 +13,7 @@ dependencies = [
     "psycopg[binary]>=3.2",
     "alembic>=1.13",
     "pyjwt>=2.8",
+    "pyyaml>=6.0",
 ]
 
 [dependency-groups]
@@ -27,6 +28,7 @@ dev = [
     "import-linter>=2.0",
     "pre-commit>=3.7",
     "pip-audit>=2.7",
+    "types-pyyaml>=6.0.12.20261122",
 ]
 
 [build-system]
@@ -107,3 +109,9 @@ forbidden_modules = ["gnosis.skills", "gnosis.ingestion", "gnosis.discovery", "g
 
 [tool.ruff.lint.isort]
 known-first-party = ["gnosis", "gnosis_api", "tests"]
+
+[[tool.importlinter.contracts]]
+name = "Knowledge registry does not depend on review (review sits above the registry)"
+type = "forbidden"
+source_modules = ["gnosis.knowledge"]
+forbidden_modules = ["gnosis.review"]

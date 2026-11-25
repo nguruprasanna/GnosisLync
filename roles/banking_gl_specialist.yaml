@@ -1,0 +1,10 @@
+id: banking_gl_specialist
+version: 1.0.0
+display_name: Banking GL Specialist
+domains: [GL, ACCOUNTING, RECON, REGULATORY]
+products: [TEMENOS_TRANSACT]
+allowed_skills: [get_banking_concept, get_product_knowledge, get_site_context]
+review_authority:
+  can_approve:
+    domains: [GL, ACCOUNTING, RECON, REGULATORY]
+    max_financial_significance: HIGH

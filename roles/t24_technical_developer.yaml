@@ -1,0 +1,10 @@
+id: t24_technical_developer
+version: 1.0.0
+display_name: T24 Technical Developer
+domains: [RUNTIME]
+products: [TEMENOS_TRANSACT]
+allowed_skills: [get_product_knowledge, get_site_context]
+review_authority:
+  can_approve:
+    domains: [RUNTIME, DATA]
+    max_financial_significance: MEDIUM

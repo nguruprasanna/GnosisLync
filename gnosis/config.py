@@ -1,5 +1,7 @@
 """Runtime settings (environment variables prefixed GNOSIS_)."""
 
+from pathlib import Path
+
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -14,3 +16,5 @@ class Settings(BaseSettings):
     jwt_hs256_secret: SecretStr | None = None
     jwt_audience: str = "gnosislync"
     jwt_issuer: str = "gnosislync-dev"
+    # Versioned role profiles (docs/architecture/04 §2).
+    roles_dir: Path = Path(__file__).resolve().parents[1] / "roles"

@@ -95,9 +95,14 @@ class ReviewAuthority:
 
     domains: frozenset[str]
     max_significance: Significance
+    entity_kinds: frozenset[str] = frozenset()  # empty = any kind
 
-    def covers(self, item_domains: frozenset[str], significance: Significance) -> bool:
+    def covers(
+        self, item_domains: frozenset[str], significance: Significance, kind: str | None = None
+    ) -> bool:
         if significance > self.max_significance:
+            return False
+        if kind is not None and self.entity_kinds and kind not in self.entity_kinds:
             return False
         return not item_domains or bool(item_domains & self.domains)
 
@@ -115,6 +120,7 @@ class VersionState:
     basis: Basis | None
     significance: Significance
     domains: frozenset[str] = field(default_factory=frozenset)
+    kind: str | None = None
 
 
 def check_creation(status: Status, basis: Basis | None) -> None:
@@ -138,7 +144,7 @@ def _qualified(approvals: list[Approval], state: VersionState, accepted: set[Dec
     return {
         a.reviewer_id
         for a in approvals
-        if a.decision in accepted and a.authority.covers(state.domains, state.significance)
+        if a.decision in accepted and a.authority.covers(state.domains, state.significance, state.kind)
     }
 
 

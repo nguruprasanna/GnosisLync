@@ -6,9 +6,13 @@ entitles them to. Request parameters alone never grant access.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+import uuid
+from dataclasses import dataclass, field
 from enum import StrEnum
 from uuid import UUID
+
+# Namespace for deriving stable principal ids from token subjects (until the IdP issues UUID subjects).
+PRINCIPAL_NAMESPACE = UUID("2b0f6d1e-5c3a-4f7e-8d9b-1a2c3e4f5a6b")
 
 
 class Purpose(StrEnum):
@@ -16,6 +20,11 @@ class Purpose(StrEnum):
     TESTING = "TESTING"
     KNOWLEDGE_ADMIN = "KNOWLEDGE_ADMIN"
     DISCOVERY = "DISCOVERY"
+
+
+class PrincipalKind(StrEnum):
+    HUMAN = "HUMAN"
+    SERVICE = "SERVICE"
 
 
 class ContextError(PermissionError):
@@ -31,6 +40,16 @@ class Principal:
     subject: str
     tenant_ids: frozenset[UUID]
     can_write_shared: bool = False
+    roles: frozenset[str] = field(default_factory=frozenset)
+    kind: PrincipalKind = PrincipalKind.SERVICE
+
+    @property
+    def principal_id(self) -> UUID:
+        """Stable UUID for this subject, used in created_by / reviewer_id columns."""
+        try:
+            return UUID(self.subject)
+        except ValueError:
+            return uuid.uuid5(PRINCIPAL_NAMESPACE, self.subject)
 
 
 @dataclass(frozen=True)

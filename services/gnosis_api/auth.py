@@ -10,6 +10,8 @@ Expected claims::
     exp      required
     tenants  {"<TENANT_CODE>": "<tenant uuid>", ...}   entitlements
     gnosis_shared_write  bool (optional)
+    roles    ["<role profile id>", ...] (optional) role profiles the principal may act under
+    principal_type  "HUMAN" | "SERVICE" (optional, default SERVICE). Review decisions require HUMAN.
 """
 
 from __future__ import annotations
@@ -19,7 +21,7 @@ from uuid import UUID
 
 import jwt
 
-from gnosis.context import ContextError, Principal
+from gnosis.context import ContextError, Principal, PrincipalKind
 
 
 class TokenVerifier(Protocol):
@@ -53,9 +55,18 @@ class HS256DevVerifier:
             tenants = {str(code): UUID(str(tid)) for code, tid in raw.items()}
         except ValueError as exc:
             raise ContextError("INVALID_TOKEN", "tenants claim contains an invalid id") from exc
+        roles = claims.get("roles") or []
+        if not isinstance(roles, list) or not all(isinstance(r, str) for r in roles):
+            raise ContextError("INVALID_TOKEN", "roles claim must be a list of strings")
+        try:
+            kind = PrincipalKind(claims.get("principal_type", PrincipalKind.SERVICE.value))
+        except ValueError as exc:
+            raise ContextError("INVALID_TOKEN", "principal_type must be HUMAN or SERVICE") from exc
         principal = Principal(
             subject=str(claims["sub"]),
             tenant_ids=frozenset(tenants.values()),
             can_write_shared=claims.get("gnosis_shared_write") is True,
+            roles=frozenset(roles),
+            kind=kind,
         )
         return principal, tenants

@@ -2,6 +2,7 @@
 
     uv run python scripts/demo.py seed      # two demo banks + shared knowledge (idempotent)
     uv run python scripts/demo.py token --tenant DEMO_A [--tenant DEMO_B] [--sub user:alice]
+                                        [--human] [--role lending_aa_specialist] [--shared-write]
     uv run python scripts/demo.py guards    # try to break the rules as the app role; every attempt must fail
     uv run python scripts/demo.py ids       # print the demo entity ids for curl
 
@@ -224,7 +225,7 @@ def ids() -> None:
 
 
 # ------------------------------------------------------------------------------------------------ token
-def token(tenant_codes: list[str], sub: str, shared_write: bool) -> None:
+def token(tenant_codes: list[str], sub: str, shared_write: bool, roles: list[str], human: bool) -> None:
     settings = Settings()
     if settings.jwt_hs256_secret is None:
         sys.exit("GNOSIS_JWT_HS256_SECRET is not set (use the same value as the running API).")
@@ -240,6 +241,8 @@ def token(tenant_codes: list[str], sub: str, shared_write: bool) -> None:
         "exp": now + 8 * 3600,
         "tenants": {code: str(TENANTS[code][1]) for code in tenant_codes},
         "gnosis_shared_write": shared_write,
+        "roles": roles,
+        "principal_type": "HUMAN" if human else "SERVICE",
     }
     print(jwt.encode(claims, settings.jwt_hs256_secret.get_secret_value(), algorithm="HS256"))
 
@@ -364,6 +367,8 @@ def main() -> None:
     t.add_argument("--tenant", action="append", required=True, help="DEMO_A or DEMO_B; repeatable")
     t.add_argument("--sub", default="user:alice")
     t.add_argument("--shared-write", action="store_true")
+    t.add_argument("--role", action="append", default=[], help="role profile id (roles/*.yaml); repeatable")
+    t.add_argument("--human", action="store_true", help="HUMAN principal (needed for review decisions)")
     args = parser.parse_args()
     if args.cmd == "seed":
         seed()
@@ -372,7 +377,7 @@ def main() -> None:
     elif args.cmd == "guards":
         guards()
     else:
-        token(args.tenant, args.sub, args.shared_write)
+        token(args.tenant, args.sub, args.shared_write, args.role, args.human)
 
 
 if __name__ == "__main__":
